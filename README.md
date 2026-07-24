@@ -162,7 +162,7 @@ Example:
 token="$(
   curl --silent --request POST http://localhost:8000/api/v1/auth/token \
     --header 'Content-Type: application/json' \
-    --data '{"email":"admin@retailflow.local","password":"<ADMIN_PASSWORD>"}' |
+    --data '{"email":"admin@example.com","password":"<ADMIN_PASSWORD>"}' |
   jq --raw-output '.accessToken'
 )"
 

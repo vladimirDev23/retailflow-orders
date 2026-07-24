@@ -1,8 +1,20 @@
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from retailflow_orders.api.models import TokenRequest
+from retailflow_orders.config import Settings
 from retailflow_orders.main import create_app
 from retailflow_orders.observability import configure_logging
+
+
+def test_default_admin_email_is_accepted_by_login_contract() -> None:
+    settings = Settings()
+    request = TokenRequest(
+        email=settings.admin_email,
+        password=settings.admin_password.get_secret_value(),
+    )
+
+    assert request.email == settings.admin_email
 
 
 def test_openapi_exposes_product_workflows_and_bearer_authentication() -> None:

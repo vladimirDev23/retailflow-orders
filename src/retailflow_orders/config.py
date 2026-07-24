@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic import AnyHttpUrl, EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     idempotency_lock_seconds: int = Field(default=30, ge=5, le=300)
     product_cache_ttl_seconds: int = Field(default=300, ge=10, le=3600)
 
-    admin_email: str = "admin@retailflow.local"
+    admin_email: EmailStr = Field(default="admin@example.com")
     admin_password: SecretStr = SecretStr("replace-with-local-admin-password")
 
 

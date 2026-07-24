@@ -10,6 +10,7 @@ if [[ -f .env ]]; then
 fi
 
 api_url="${API_URL:-http://localhost:8000}"
+admin_email="${ADMIN_EMAIL:?set ADMIN_EMAIL or create .env from .env.example}"
 admin_password="${ADMIN_PASSWORD:?set ADMIN_PASSWORD or create .env from .env.example}"
 run_id="$(date +%s)-$$"
 product_id="33333333-3333-4333-8333-333333333333"
@@ -30,8 +31,8 @@ token="$(
   curl --fail-with-body --silent --show-error \
     --request POST "${api_url}/api/v1/auth/token" \
     --header "Content-Type: application/json" \
-    --data "$(jq -n --arg password "${admin_password}" \
-      '{email: "admin@retailflow.local", password: $password}')" |
+    --data "$(jq -n --arg email "${admin_email}" --arg password "${admin_password}" \
+      '{email: $email, password: $password}')" |
     jq --exit-status --raw-output '.accessToken'
 )"
 
