@@ -28,10 +28,10 @@ class Settings(BaseSettings):
     reconciliation_batch_size: int = Field(default=50, ge=1, le=500)
 
     inventory_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8090")
-    inventory_service_token: SecretStr = SecretStr("local-inventory-token")
+    inventory_service_token: SecretStr = SecretStr("replace-with-inventory-service-token")
 
     jwt_secret: SecretStr = Field(
-        default=SecretStr("local-only-secret-change-before-deployment-0123456789"),
+        default=SecretStr("replace-with-at-least-32-random-characters"),
         min_length=32,
     )
     jwt_issuer: str = "retailflow-orders"
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     product_cache_ttl_seconds: int = Field(default=300, ge=10, le=3600)
 
     admin_email: str = "admin@retailflow.local"
-    admin_password: SecretStr = SecretStr("local-admin-password")
+    admin_password: SecretStr = SecretStr("replace-with-local-admin-password")
 
 
 @lru_cache

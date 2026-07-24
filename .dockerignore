@@ -8,6 +8,12 @@ __pycache__
 .coverage
 htmlcov
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 *.log
 dist
 build
