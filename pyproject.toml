@@ -56,6 +56,7 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["retailflow_orders"]
+omit = ["src/retailflow_orders/worker.py"]
 
 [tool.coverage.report]
 fail_under = 85

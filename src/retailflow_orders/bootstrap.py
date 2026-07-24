@@ -37,6 +37,7 @@ class ApplicationContainer:
     login: LoginService
     orders: IdempotentOrderFacade
     order_queries: OrderQueryService
+    checkout: CheckoutOrderService
 
     async def close(self) -> None:
         await self.http_client.aclose()
@@ -104,4 +105,5 @@ def build_container(settings: Settings) -> ApplicationContainer:
             query_service=query_service,
         ),
         order_queries=query_service,
+        checkout=checkout_service,
     )

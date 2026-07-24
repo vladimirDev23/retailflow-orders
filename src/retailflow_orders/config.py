@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_order_events_topic: str = "retailflow.order-events.v1"
+    outbox_batch_size: int = Field(default=100, ge=1, le=1000)
+    outbox_lock_seconds: int = Field(default=30, ge=5, le=300)
+    reconciliation_batch_size: int = Field(default=50, ge=1, le=500)
 
     inventory_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:8090")
     inventory_service_token: SecretStr = SecretStr("local-inventory-token")
