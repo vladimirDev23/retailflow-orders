@@ -130,6 +130,7 @@ class SqlAlchemyOrderRepository:
         return OrderModel(
             id=order.id,
             customer_id=order.customer_id,
+            warehouse_id=order.warehouse_id,
             currency=order.currency,
             total_amount=order.total,
             status=order.status.value,
@@ -141,6 +142,7 @@ class SqlAlchemyOrderRepository:
             updated_at=order.updated_at,
             lines=[
                 OrderLineModel(
+                    product_id=line.product_id,
                     sku=line.sku,
                     product_name=line.product_name,
                     quantity=line.quantity,
@@ -155,9 +157,11 @@ class SqlAlchemyOrderRepository:
         return Order(
             id=model.id,
             customer_id=model.customer_id,
+            warehouse_id=model.warehouse_id,
             currency=model.currency,
             lines=tuple(
                 OrderLine(
+                    product_id=line.product_id,
                     sku=line.sku,
                     product_name=line.product_name,
                     quantity=line.quantity,

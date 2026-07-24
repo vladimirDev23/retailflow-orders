@@ -11,6 +11,8 @@ from retailflow_orders.domain.exceptions import (
 from retailflow_orders.domain.order import Order, OrderLine, OrderStatus
 
 NOW = datetime(2026, 7, 24, 12, tzinfo=UTC)
+PRODUCT_ID = uuid4()
+WAREHOUSE_ID = uuid4()
 
 
 def line(
@@ -20,6 +22,7 @@ def line(
     unit_price: Decimal = Decimal("19.95"),
 ) -> OrderLine:
     return OrderLine(
+        product_id=PRODUCT_ID,
         sku=sku,
         product_name="Industrial barcode scanner",
         quantity=quantity,
@@ -30,6 +33,7 @@ def line(
 def order() -> Order:
     return Order.create(
         customer_id=uuid4(),
+        warehouse_id=WAREHOUSE_ID,
         currency="rub",
         lines=(line(),),
         now=NOW,
@@ -114,6 +118,7 @@ def test_rejects_invalid_transition() -> None:
     [
         (
             OrderLine(
+                product_id=PRODUCT_ID,
                 sku="sku-1",
                 product_name="First",
                 quantity=1,
@@ -127,6 +132,7 @@ def test_rejects_duplicate_skus(candidate: OrderLine, message: str) -> None:
     with pytest.raises(DomainValidationError, match=message):
         Order.create(
             customer_id=uuid4(),
+            warehouse_id=WAREHOUSE_ID,
             currency="RUB",
             lines=(candidate, candidate),
             now=NOW,
@@ -147,13 +153,18 @@ def test_rejects_invalid_order_lines(
     message: str,
 ) -> None:
     with pytest.raises(DomainValidationError, match=message):
-        OrderLine(product_name="Product", **kwargs)  # type: ignore[arg-type]
+        OrderLine(
+            product_id=PRODUCT_ID,
+            product_name="Product",
+            **kwargs,  # type: ignore[arg-type]
+        )
 
 
 def test_rejects_naive_timestamps() -> None:
     with pytest.raises(DomainValidationError, match="timezone"):
         Order.create(
             customer_id=uuid4(),
+            warehouse_id=WAREHOUSE_ID,
             currency="RUB",
             lines=(line(),),
             now=NOW.replace(tzinfo=None),

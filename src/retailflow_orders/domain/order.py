@@ -63,6 +63,7 @@ def _require_aware(timestamp: datetime) -> None:
 
 @dataclass(frozen=True, slots=True)
 class OrderLine:
+    product_id: UUID
     sku: str
     product_name: str
     quantity: int
@@ -98,6 +99,7 @@ class OrderLine:
 class Order:
     id: UUID
     customer_id: UUID
+    warehouse_id: UUID
     currency: str
     lines: tuple[OrderLine, ...]
     status: OrderStatus
@@ -114,6 +116,7 @@ class Order:
         cls,
         *,
         customer_id: UUID,
+        warehouse_id: UUID,
         currency: str,
         lines: tuple[OrderLine, ...],
         now: datetime,
@@ -135,6 +138,7 @@ class Order:
         order = cls(
             id=order_id or uuid4(),
             customer_id=customer_id,
+            warehouse_id=warehouse_id,
             currency=normalized_currency,
             lines=lines,
             status=OrderStatus.DRAFT,
@@ -146,6 +150,7 @@ class Order:
             now,
             {
                 "customerId": str(customer_id),
+                "warehouseId": str(warehouse_id),
                 "currency": normalized_currency,
                 "total": str(order.total),
                 "status": order.status.value,

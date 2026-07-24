@@ -33,6 +33,7 @@ def upgrade() -> None:
         "orders",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("customer_id", sa.Uuid(), nullable=False),
+        sa.Column("warehouse_id", sa.Uuid(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("total_amount", sa.Numeric(precision=19, scale=2), nullable=False),
         sa.Column("status", sa.String(length=40), nullable=False),
@@ -69,6 +70,7 @@ def upgrade() -> None:
         "order_lines",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("order_id", sa.Uuid(), nullable=False),
+        sa.Column("product_id", sa.Uuid(), nullable=False),
         sa.Column("sku", sa.String(length=64), nullable=False),
         sa.Column("product_name", sa.String(length=200), nullable=False),
         sa.Column("quantity", sa.Integer(), nullable=False),
@@ -206,6 +208,7 @@ def upgrade() -> None:
     op.create_table(
         "product_snapshots",
         sa.Column("sku", sa.String(length=64), nullable=False),
+        sa.Column("product_id", sa.Uuid(), nullable=False),
         sa.Column("product_name", sa.String(length=200), nullable=False),
         sa.Column("unit_price", sa.Numeric(precision=19, scale=2), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
@@ -217,6 +220,10 @@ def upgrade() -> None:
             name=op.f("ck_product_snapshots_unit_price_positive"),
         ),
         sa.PrimaryKeyConstraint("sku", name=op.f("pk_product_snapshots")),
+        sa.UniqueConstraint(
+            "product_id",
+            name=op.f("uq_product_snapshots_product_id"),
+        ),
     )
     op.create_index(
         "ix_product_snapshots_updated",

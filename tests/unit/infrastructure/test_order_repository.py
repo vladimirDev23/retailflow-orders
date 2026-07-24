@@ -22,14 +22,18 @@ from retailflow_orders.infrastructure.database.repositories import (
 NOW = datetime(2026, 7, 24, 12, tzinfo=UTC)
 UPDATED_VERSION = 2
 PAGE_SIZE = 20
+WAREHOUSE_ID = uuid4()
+PRODUCT_ID = uuid4()
 
 
 def order() -> Order:
     return Order.create(
         customer_id=uuid4(),
+        warehouse_id=WAREHOUSE_ID,
         currency="RUB",
         lines=(
             OrderLine(
+                product_id=PRODUCT_ID,
                 sku="SKU-100",
                 product_name="Barcode scanner",
                 quantity=2,

@@ -34,3 +34,7 @@ class Database:
 
     async def close(self) -> None:
         await self._engine.dispose()
+
+    @property
+    def session_factory(self) -> async_sessionmaker[AsyncSession]:
+        return self._sessions

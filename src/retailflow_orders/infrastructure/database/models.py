@@ -67,6 +67,7 @@ class OrderModel(Base):
     customer_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"),
     )
+    warehouse_id: Mapped[UUID] = mapped_column(Uuid)
     currency: Mapped[str] = mapped_column(String(3))
     total_amount: Mapped[Decimal] = mapped_column(MONEY_TYPE)
     status: Mapped[str] = mapped_column(String(40), default=OrderStatus.DRAFT.value)
@@ -103,6 +104,7 @@ class OrderLineModel(Base):
     order_id: Mapped[UUID] = mapped_column(
         ForeignKey("orders.id", ondelete="CASCADE"),
     )
+    product_id: Mapped[UUID] = mapped_column(Uuid)
     sku: Mapped[str] = mapped_column(String(64))
     product_name: Mapped[str] = mapped_column(String(200))
     quantity: Mapped[int] = mapped_column(Integer)
@@ -217,6 +219,7 @@ class ProductSnapshotModel(Base):
     )
 
     sku: Mapped[str] = mapped_column(String(64), primary_key=True)
+    product_id: Mapped[UUID] = mapped_column(Uuid, unique=True)
     product_name: Mapped[str] = mapped_column(String(200))
     unit_price: Mapped[Decimal] = mapped_column(MONEY_TYPE)
     currency: Mapped[str] = mapped_column(String(3))
