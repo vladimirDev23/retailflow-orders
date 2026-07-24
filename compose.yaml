@@ -37,7 +37,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   redis:
-    image: redis:8.8.0-bookworm
+    image: redis:8.2.7-bookworm
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "6379:6379"
@@ -48,7 +48,7 @@ services:
       retries: 20
 
   kafka:
-    image: apache/kafka:4.1.1
+    image: apache/kafka:4.3.1
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller

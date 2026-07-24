@@ -13,7 +13,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture(scope="module")
 def redis_url() -> Iterator[str]:
     require_docker()
-    with DockerContainer("redis:8.8.0-bookworm").with_exposed_ports(6379) as redis:
+    with DockerContainer("redis:8.2.7-bookworm").with_exposed_ports(6379) as redis:
         wait_for_logs(redis, "Ready to accept connections")
         host = redis.get_container_host_ip()
         port = redis.get_exposed_port(6379)

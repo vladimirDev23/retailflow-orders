@@ -19,11 +19,17 @@ updates:
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: python
-        update-types:
-          - version-update:semver-major
+        versions:
+          - ">=3.14"
 
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # PostgreSQL 17 is the tested persistence baseline. A database major
+      # upgrade requires an explicit migration and recovery exercise.
+      - dependency-name: postgres
+        versions:
+          - ">=18"
