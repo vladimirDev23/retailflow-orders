@@ -1,0 +1,117 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "retailflow-orders"
+version = "0.1.0"
+description = "Production-like order orchestration and checkout service for RetailFlow."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = "MIT"
+authors = [{ name = "Vladimir Kosenko" }]
+dependencies = [
+    "alembic==1.18.5",
+    "asyncpg==0.31.0",
+    "celery[redis]==5.6.3",
+    "confluent-kafka==2.15.0",
+    "email-validator==2.3.0",
+    "fastapi==0.139.2",
+    "httpx2==2.9.1",
+    "prometheus-fastapi-instrumentator==8.0.2",
+    "pydantic-settings==2.14.2",
+    "pwdlib[argon2]==0.3.0",
+    "pyjwt==2.13.0",
+    # Celery 5.6/Kombu currently requires redis-py <6.5.
+    "redis[hiredis]==6.4.0",
+    "sqlalchemy[asyncio]==2.0.51",
+    "structlog==26.1.0",
+    "tenacity==9.1.4",
+    "uvicorn[standard]==0.51.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy==2.3.0",
+    "pip-audit==2.10.1",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.0",
+    "testcontainers[kafka,postgres]==4.14.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/retailflow_orders"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: requires containerized infrastructure",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["retailflow_orders"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ASYNC",
+    "B",
+    "C4",
+    "DTZ",
+    "E",
+    "F",
+    "FAST",
+    "I",
+    "N",
+    "PERF",
+    "PIE",
+    "PL",
+    "RUF",
+    "S",
+    "SIM",
+    "T20",
+    "UP",
+]
+ignore = ["PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+mypy_path = "src"
+exclude = ["alembic/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "celery.*",
+    "confluent_kafka.*",
+    "prometheus_fastapi_instrumentator.*",
+    "testcontainers.*",
+]
+ignore_missing_imports = true
