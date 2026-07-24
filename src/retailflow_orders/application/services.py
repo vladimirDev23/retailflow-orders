@@ -37,6 +37,7 @@ class CreateOrderCommand:
     warehouse_id: UUID
     lines: tuple[CreateOrderLineCommand, ...]
     correlation_id: str
+    order_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +94,7 @@ class CreateOrderService:
             currency=currency,
             lines=domain_lines,
             now=self._clock.now(),
+            order_id=command.order_id,
         )
         async with self._uow_factory() as uow:
             await uow.orders.add(

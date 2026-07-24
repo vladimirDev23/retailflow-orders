@@ -2,10 +2,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Protocol, Self
+from typing import Any, Protocol, Self
 from uuid import UUID
 
-from retailflow_orders.domain.order import Order
+from retailflow_orders.domain.order import Order, OrderStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +28,20 @@ class PaymentDecision:
     approved: bool
     reference: str | None
     reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class OrderPage:
+    items: tuple[Order, ...]
+    total: int
+    limit: int
+    offset: int
+
+
+@dataclass(frozen=True, slots=True)
+class IdempotencyClaim:
+    resource_id: UUID
+    completed: bool
 
 
 class Clock(Protocol):
@@ -95,6 +109,15 @@ class OrderRepository(Protocol):
         correlation_id: str,
     ) -> None: ...
 
+    async def list_for_customer(
+        self,
+        customer_id: UUID,
+        *,
+        status: OrderStatus | None,
+        limit: int,
+        offset: int,
+    ) -> OrderPage: ...
+
 
 class UnitOfWork(Protocol):
     @property
@@ -114,3 +137,25 @@ class UnitOfWork(Protocol):
 
 class UnitOfWorkFactory(Protocol):
     def __call__(self) -> UnitOfWork: ...
+
+
+class IdempotencyCoordinator(Protocol):
+    async def claim(
+        self,
+        *,
+        scope: str,
+        key: str,
+        request_payload: dict[str, Any],
+        resource_id: UUID | None = None,
+    ) -> IdempotencyClaim: ...
+
+    async def complete(
+        self,
+        *,
+        scope: str,
+        key: str,
+        response_status: int,
+        response_body: dict[str, Any],
+    ) -> None: ...
+
+    async def abandon(self, *, scope: str, key: str) -> None: ...

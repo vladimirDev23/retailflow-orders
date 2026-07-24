@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -6,6 +5,7 @@ from sqlalchemy import Select, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from retailflow_orders.application.ports import OrderPage
 from retailflow_orders.domain.events import DomainEvent
 from retailflow_orders.domain.order import Order, OrderLine, OrderStatus
 from retailflow_orders.infrastructure.database.models import (
@@ -18,14 +18,6 @@ from retailflow_orders.infrastructure.database.models import (
 
 class ConcurrentOrderUpdateError(Exception):
     """Raised when an optimistic order update loses a race."""
-
-
-@dataclass(frozen=True, slots=True)
-class OrderPage:
-    items: tuple[Order, ...]
-    total: int
-    limit: int
-    offset: int
 
 
 class SqlAlchemyOrderRepository:

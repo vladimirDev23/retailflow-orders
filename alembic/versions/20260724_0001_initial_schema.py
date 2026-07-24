@@ -150,10 +150,12 @@ def upgrade() -> None:
         sa.Column("scope", sa.String(length=100), nullable=False),
         sa.Column("key_hash", sa.String(length=64), nullable=False),
         sa.Column("request_hash", sa.String(length=64), nullable=False),
+        sa.Column("state", sa.String(length=20), nullable=False),
         sa.Column("resource_id", sa.Uuid(), nullable=True),
         sa.Column("response_status", sa.Integer(), nullable=True),
         sa.Column("response_body", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("locked_until", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_idempotency_records")),
         sa.UniqueConstraint(

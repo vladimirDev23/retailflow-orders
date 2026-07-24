@@ -13,11 +13,15 @@ from retailflow_orders.application.exceptions import (
     OrderNotFoundError,
     ProductUnavailableError,
 )
+from retailflow_orders.application.facade import IdempotentOrderFacade
 from retailflow_orders.application.ports import (
+    IdempotencyClaim,
+    OrderPage,
     PaymentDecision,
     ProductSnapshot,
     ReservationResult,
 )
+from retailflow_orders.application.queries import OrderQueryService
 from retailflow_orders.application.services import (
     CheckoutOrderCommand,
     CheckoutOrderService,
@@ -67,6 +71,21 @@ class MemoryOrderRepository:
         order.pull_events()
         self._orders[order.id] = order
 
+    async def list_for_customer(
+        self,
+        customer_id: UUID,
+        *,
+        status: OrderStatus | None,
+        limit: int,
+        offset: int,
+    ) -> OrderPage:
+        orders = tuple(
+            order
+            for order in self._orders.values()
+            if order.customer_id == customer_id and (status is None or order.status is status)
+        )
+        return OrderPage(items=orders, total=len(orders), limit=limit, offset=offset)
+
 
 class MemoryUnitOfWork:
     def __init__(self, orders: dict[UUID, Order]) -> None:
@@ -94,6 +113,41 @@ class MemoryUnitOfWorkFactory:
 
     def __call__(self) -> MemoryUnitOfWork:
         return MemoryUnitOfWork(self.orders)
+
+
+class MemoryIdempotencyCoordinator:
+    def __init__(self) -> None:
+        self.claims: dict[tuple[str, str], tuple[UUID, bool]] = {}
+
+    async def claim(
+        self,
+        *,
+        scope: str,
+        key: str,
+        request_payload: dict[str, object],
+        resource_id: UUID | None = None,
+    ) -> IdempotencyClaim:
+        stored = self.claims.get((scope, key))
+        if stored is not None:
+            return IdempotencyClaim(resource_id=stored[0], completed=stored[1])
+        claimed_id = resource_id or uuid4()
+        self.claims[(scope, key)] = (claimed_id, False)
+        return IdempotencyClaim(resource_id=claimed_id, completed=False)
+
+    async def complete(
+        self,
+        *,
+        scope: str,
+        key: str,
+        response_status: int,
+        response_body: dict[str, object],
+    ) -> None:
+        resource_id, _ = self.claims[(scope, key)]
+        self.claims[(scope, key)] = (resource_id, True)
+
+    async def abandon(self, *, scope: str, key: str) -> None:
+        resource_id, _ = self.claims[(scope, key)]
+        self.claims[(scope, key)] = (resource_id, False)
 
 
 class MemoryCatalog:
@@ -373,3 +427,75 @@ async def test_customer_cannot_observe_another_customers_order() -> None:
 
     with pytest.raises(OrderNotFoundError, match="not found"):
         await service.execute(checkout_command(created, customer_id=OTHER_CUSTOMER_ID))
+
+
+async def test_idempotent_facade_replays_created_order() -> None:
+    uow_factory = MemoryUnitOfWorkFactory()
+    coordinator = MemoryIdempotencyCoordinator()
+    create_service = CreateOrderService(
+        uow_factory=uow_factory,
+        catalog=MemoryCatalog({PRODUCT_ID: snapshot()}),
+        clock=FixedClock(),
+    )
+    query_service = OrderQueryService(uow_factory)
+    facade = IdempotentOrderFacade(
+        coordinator=coordinator,
+        create_service=create_service,
+        checkout_service=checkout_service(
+            uow_factory=uow_factory,
+            inventory=InventoryFake(),
+            payment=PaymentFake(PaymentDecision(approved=True, reference="pay-100", reason=None)),
+        ),
+        query_service=query_service,
+    )
+
+    first = await facade.create(
+        create_command(),
+        idempotency_key="create-key-100",
+        request_payload={"warehouseId": str(WAREHOUSE_ID)},
+    )
+    replay = await facade.create(
+        create_command(),
+        idempotency_key="create-key-100",
+        request_payload={"warehouseId": str(WAREHOUSE_ID)},
+    )
+
+    assert replay.id == first.id
+    assert len(uow_factory.orders) == 1
+
+
+async def test_idempotent_facade_completes_checkout_and_query_page() -> None:
+    uow_factory = MemoryUnitOfWorkFactory()
+    created = await create_order(uow_factory)
+    coordinator = MemoryIdempotencyCoordinator()
+    query_service = OrderQueryService(uow_factory)
+    facade = IdempotentOrderFacade(
+        coordinator=coordinator,
+        create_service=CreateOrderService(
+            uow_factory=uow_factory,
+            catalog=MemoryCatalog({PRODUCT_ID: snapshot()}),
+            clock=FixedClock(),
+        ),
+        checkout_service=checkout_service(
+            uow_factory=uow_factory,
+            inventory=InventoryFake(),
+            payment=PaymentFake(PaymentDecision(approved=True, reference="pay-100", reason=None)),
+        ),
+        query_service=query_service,
+    )
+
+    checked_out = await facade.checkout(
+        checkout_command(created),
+        idempotency_key="checkout-key-100",
+        request_payload={"paymentMethod": "pm_demo_approved"},
+    )
+    page = await query_service.list_for_customer(
+        CUSTOMER_ID,
+        status=OrderStatus.CONFIRMED,
+        limit=20,
+        offset=0,
+    )
+
+    assert checked_out.status is OrderStatus.CONFIRMED
+    assert page.total == 1
+    assert page.items == (checked_out,)

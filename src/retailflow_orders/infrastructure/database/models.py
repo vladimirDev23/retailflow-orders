@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -22,22 +21,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from retailflow_orders.domain.identity import UserRole
 from retailflow_orders.domain.order import OrderStatus
 from retailflow_orders.infrastructure.database.base import Base, utc_now
 
 JSON_DOCUMENT = JSON().with_variant(JSONB, "postgresql")
 MONEY_TYPE = Numeric(19, 2)
-
-
-class UserRole(StrEnum):
-    ADMIN = "ADMIN"
-    CUSTOMER = "CUSTOMER"
-    SERVICE = "SERVICE"
-
-
-class PaymentStatus(StrEnum):
-    APPROVED = "APPROVED"
-    DECLINED = "DECLINED"
 
 
 class UserModel(Base):
@@ -162,6 +151,7 @@ class IdempotencyRecordModel(Base):
     scope: Mapped[str] = mapped_column(String(100))
     key_hash: Mapped[str] = mapped_column(String(64))
     request_hash: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(20))
     resource_id: Mapped[UUID | None] = mapped_column(Uuid)
     response_status: Mapped[int | None] = mapped_column(Integer)
     response_body: Mapped[dict[str, Any] | None] = mapped_column(JSON_DOCUMENT)
@@ -169,6 +159,7 @@ class IdempotencyRecordModel(Base):
         DateTime(timezone=True),
         default=utc_now,
     )
+    locked_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

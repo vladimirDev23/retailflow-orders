@@ -20,3 +20,15 @@ class InventoryRejectedError(ApplicationError):
 
 class InventoryUnavailableError(ApplicationError):
     """Raised when Inventory cannot provide a conclusive response."""
+
+
+class IdempotencyConflictError(ApplicationError):
+    """Raised when one key is reused with a different request."""
+
+
+class IdempotencyInProgressError(ApplicationError):
+    """Raised while another request owns the short idempotency lease."""
+
+
+class AuthenticationError(ApplicationError):
+    """Raised when credentials or an access token cannot be trusted."""
