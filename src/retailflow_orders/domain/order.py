@@ -186,10 +186,33 @@ class Order:
             raise DomainValidationError(message)
         self._transition(OrderStatus.PAYMENT_PENDING, now=now)
 
+    def record_payment_approval(self, *, payment_reference: str, now: datetime) -> None:
+        _require_aware(now)
+        if self.status is not OrderStatus.PAYMENT_PENDING:
+            message = "Payment approval can only be recorded while payment is pending"
+            raise InvalidOrderTransitionError(message)
+        normalized_reference = payment_reference.strip()
+        if not normalized_reference:
+            message = "Payment reference cannot be empty"
+            raise DomainValidationError(message)
+        if self.payment_reference is not None and self.payment_reference != normalized_reference:
+            message = "Order already references a different payment"
+            raise DomainValidationError(message)
+        self.payment_reference = normalized_reference
+        self.updated_at = now
+        self._record_event(
+            "OrderPaymentApproved",
+            now,
+            {"paymentReference": normalized_reference},
+        )
+
     def confirm_payment(self, *, payment_reference: str, now: datetime) -> None:
         normalized_reference = payment_reference.strip()
         if not normalized_reference:
             message = "Payment reference cannot be empty"
+            raise DomainValidationError(message)
+        if self.payment_reference is not None and self.payment_reference != normalized_reference:
+            message = "Order already references a different payment"
             raise DomainValidationError(message)
         self._transition(OrderStatus.CONFIRMED, now=now)
         self.payment_reference = normalized_reference

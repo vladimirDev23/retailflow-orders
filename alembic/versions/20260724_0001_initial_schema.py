@@ -117,34 +117,6 @@ def upgrade() -> None:
         ["order_id", "occurred_at"],
     )
     op.create_table(
-        "payment_attempts",
-        sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("order_id", sa.Uuid(), nullable=False),
-        sa.Column("idempotency_key", sa.String(length=100), nullable=False),
-        sa.Column("status", sa.String(length=20), nullable=False),
-        sa.Column("amount", sa.Numeric(precision=19, scale=2), nullable=False),
-        sa.Column("provider_reference", sa.String(length=120), nullable=True),
-        sa.Column("failure_reason", sa.String(length=500), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["order_id"],
-            ["orders.id"],
-            name=op.f("fk_payment_attempts_order_id_orders"),
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_payment_attempts")),
-        sa.UniqueConstraint(
-            "order_id",
-            "idempotency_key",
-            name=op.f("uq_payment_attempts_order_id"),
-        ),
-    )
-    op.create_index(
-        "ix_payment_attempts_order_created",
-        "payment_attempts",
-        ["order_id", "created_at"],
-    )
-    op.create_table(
         "idempotency_records",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("scope", sa.String(length=100), nullable=False),
@@ -243,8 +215,6 @@ def downgrade() -> None:
     op.drop_table("outbox_events")
     op.drop_index("ix_idempotency_records_expires", table_name="idempotency_records")
     op.drop_table("idempotency_records")
-    op.drop_index("ix_payment_attempts_order_created", table_name="payment_attempts")
-    op.drop_table("payment_attempts")
     op.drop_index("ix_order_transitions_order_time", table_name="order_transitions")
     op.drop_table("order_transitions")
     op.drop_table("order_lines")

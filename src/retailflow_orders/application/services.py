@@ -12,7 +12,6 @@ from retailflow_orders.application.exceptions import (
 from retailflow_orders.application.ports import (
     Clock,
     InventoryGateway,
-    PaymentDecision,
     PaymentGateway,
     ProductCatalog,
     UnitOfWorkFactory,
@@ -185,6 +184,13 @@ class CheckoutOrderService:
         order: Order,
         command: CheckoutOrderCommand,
     ) -> Order:
+        if order.payment_reference is not None:
+            return await self._commit_reservation(
+                order,
+                command,
+                order.payment_reference,
+            )
+
         decision = await self._payment.charge(
             order_id=order.id,
             amount=order.total,
@@ -202,13 +208,24 @@ class CheckoutOrderService:
                 ),
             )
 
-        return await self._commit_reservation(order, command, decision)
+        reference = decision.reference
+        if reference is None:
+            message = "Approved payment response did not contain a reference"
+            raise CheckoutPendingError(message)
+        order = await self._change(
+            command,
+            lambda current: current.record_payment_approval(
+                payment_reference=reference,
+                now=self._clock.now(),
+            ),
+        )
+        return await self._commit_reservation(order, command, reference)
 
     async def _commit_reservation(
         self,
         order: Order,
         command: CheckoutOrderCommand,
-        decision: PaymentDecision,
+        payment_reference: str,
     ) -> Order:
         reservation_id = self._reservation_id(order)
         try:
@@ -221,14 +238,10 @@ class CheckoutOrderService:
             message = "Inventory commit outcome is pending reconciliation"
             raise CheckoutPendingError(message) from exception
 
-        reference = decision.reference
-        if reference is None:
-            message = "Approved payment response did not contain a reference"
-            raise CheckoutPendingError(message)
         return await self._change(
             command,
             lambda current: current.confirm_payment(
-                payment_reference=reference,
+                payment_reference=payment_reference,
                 now=self._clock.now(),
             ),
         )

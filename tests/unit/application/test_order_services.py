@@ -382,6 +382,22 @@ async def test_declined_payment_releases_reservation_and_cancels_order() -> None
     assert inventory.calls == ["reserve", "release"]
 
 
+async def test_approved_payment_without_reference_stays_pending() -> None:
+    uow_factory = MemoryUnitOfWorkFactory()
+    created = await create_order(uow_factory)
+    service = checkout_service(
+        uow_factory=uow_factory,
+        inventory=InventoryFake(),
+        payment=PaymentFake(PaymentDecision(approved=True, reference=None, reason=None)),
+    )
+
+    with pytest.raises(CheckoutPendingError, match="did not contain a reference"):
+        await service.execute(checkout_command(created))
+
+    assert created.status is OrderStatus.PAYMENT_PENDING
+    assert created.payment_reference is None
+
+
 async def test_inventory_timeout_leaves_reconcilable_reservation_state() -> None:
     uow_factory = MemoryUnitOfWorkFactory()
     created = await create_order(uow_factory)
@@ -402,18 +418,28 @@ async def test_inventory_timeout_leaves_reconcilable_reservation_state() -> None
 async def test_commit_timeout_leaves_payment_pending_for_safe_retry() -> None:
     uow_factory = MemoryUnitOfWorkFactory()
     created = await create_order(uow_factory)
+    inventory = InventoryFake(
+        commit_error=InventoryUnavailableError("timeout"),
+    )
+    payment = PaymentFake(PaymentDecision(approved=True, reference="pay-100", reason=None))
     service = checkout_service(
         uow_factory=uow_factory,
-        inventory=InventoryFake(
-            commit_error=InventoryUnavailableError("timeout"),
-        ),
-        payment=PaymentFake(PaymentDecision(approved=True, reference="pay-100", reason=None)),
+        inventory=inventory,
+        payment=payment,
     )
 
     with pytest.raises(CheckoutPendingError, match="commit outcome"):
         await service.execute(checkout_command(created))
 
     assert created.status is OrderStatus.PAYMENT_PENDING
+    assert created.payment_reference == "pay-100"
+
+    inventory.commit_error = None
+    result = await service.execute(checkout_command(created))
+
+    assert result.status is OrderStatus.CONFIRMED
+    assert result.payment_reference == "pay-100"
+    assert payment.calls == 1
 
 
 async def test_customer_cannot_observe_another_customers_order() -> None:

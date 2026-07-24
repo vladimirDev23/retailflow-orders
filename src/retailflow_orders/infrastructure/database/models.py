@@ -118,28 +118,6 @@ class OrderTransitionModel(Base):
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
-class PaymentAttemptModel(Base):
-    __tablename__ = "payment_attempts"
-    __table_args__ = (
-        UniqueConstraint("order_id", "idempotency_key"),
-        Index("ix_payment_attempts_order_created", "order_id", "created_at"),
-    )
-
-    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    order_id: Mapped[UUID] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"),
-    )
-    idempotency_key: Mapped[str] = mapped_column(String(100))
-    status: Mapped[str] = mapped_column(String(20))
-    amount: Mapped[Decimal] = mapped_column(MONEY_TYPE)
-    provider_reference: Mapped[str | None] = mapped_column(String(120))
-    failure_reason: Mapped[str | None] = mapped_column(String(500))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=utc_now,
-    )
-
-
 class IdempotencyRecordModel(Base):
     __tablename__ = "idempotency_records"
     __table_args__ = (

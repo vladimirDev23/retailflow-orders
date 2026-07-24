@@ -61,16 +61,28 @@ def test_completes_happy_path_and_records_each_transition() -> None:
     created.request_reservation(now=NOW + timedelta(seconds=1))
     created.mark_reserved(reservation_id=reservation_id, now=NOW + timedelta(seconds=2))
     created.request_payment(now=NOW + timedelta(seconds=3))
-    created.confirm_payment(
+    created.record_payment_approval(
         payment_reference="pay-verified-100",
         now=NOW + timedelta(seconds=4),
+    )
+    created.confirm_payment(
+        payment_reference="pay-verified-100",
+        now=NOW + timedelta(seconds=5),
     )
 
     assert created.status is OrderStatus.CONFIRMED
     assert created.is_terminal
     assert created.reservation_id == reservation_id
     assert created.payment_reference == "pay-verified-100"
-    assert [event.payload["status"] for event in created.pull_events()] == [
+    events = created.pull_events()
+    assert [event.name for event in events] == [
+        "OrderStatusChanged",
+        "OrderStatusChanged",
+        "OrderStatusChanged",
+        "OrderPaymentApproved",
+        "OrderStatusChanged",
+    ]
+    assert [event.payload["status"] for event in events if "status" in event.payload] == [
         OrderStatus.PENDING_RESERVATION.value,
         OrderStatus.RESERVED.value,
         OrderStatus.PAYMENT_PENDING.value,
@@ -111,6 +123,26 @@ def test_rejects_invalid_transition() -> None:
         match="DRAFT to CONFIRMED",
     ):
         created.confirm_payment(payment_reference="pay-100", now=NOW)
+
+
+def test_payment_approval_requires_pending_state_and_stable_reference() -> None:
+    created = order()
+
+    with pytest.raises(InvalidOrderTransitionError, match="pending"):
+        created.record_payment_approval(payment_reference="pay-100", now=NOW)
+
+    created.request_reservation(now=NOW)
+    created.mark_reserved(reservation_id=uuid4(), now=NOW)
+    created.request_payment(now=NOW)
+
+    with pytest.raises(DomainValidationError, match="empty"):
+        created.record_payment_approval(payment_reference=" ", now=NOW)
+
+    created.record_payment_approval(payment_reference="pay-100", now=NOW)
+    with pytest.raises(DomainValidationError, match="different payment"):
+        created.record_payment_approval(payment_reference="pay-200", now=NOW)
+    with pytest.raises(DomainValidationError, match="different payment"):
+        created.confirm_payment(payment_reference="pay-200", now=NOW)
 
 
 @pytest.mark.parametrize(
