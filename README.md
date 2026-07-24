@@ -105,7 +105,7 @@ Start PostgreSQL, Redis, Kafka, the API, Celery worker/beat, and the development
 contract stub:
 
 ```bash
-docker compose up --build --detach --wait
+docker compose up --build --detach
 ./scripts/smoke-test.sh
 ```
 
