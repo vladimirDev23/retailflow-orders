@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 FROM ghcr.io/astral-sh/uv:0.11.32 AS uv
 
-FROM python:3.13.14-slim-bookworm AS builder
+FROM python:3.13.16-slim-bookworm AS builder
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 WORKDIR /app
@@ -13,7 +13,7 @@ COPY src src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-FROM python:3.13.14-slim-bookworm
+FROM python:3.13.16-slim-bookworm
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
